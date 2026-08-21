@@ -6,7 +6,7 @@ using UnityEngine;
 public class Pulpit : MonoBehaviour
 {
     [Header("UI Reference")]
-    [SerializeField] private TextMeshPro _timerText; // Optional 3D floating text
+    [SerializeField] private TextMeshPro _timerText;
 
     public event Action<Pulpit> OnSpawnTriggerTimeReached;
     public event Action<Pulpit> OnPulpitDestroyed;
@@ -31,7 +31,28 @@ public class Pulpit : MonoBehaviour
             _originalColor = _platformMaterial.color;
         }
 
+        // Trigger the spawn entrance animation
+        StartCoroutine(AnimateSpawnRoutine());
         StartCoroutine(LifetimeRoutine(spawnTime));
+    }
+
+    private IEnumerator AnimateSpawnRoutine()
+    {
+        float elapsed = 0f;
+        float duration = 0.4f;
+        Vector3 targetPosition = transform.position;
+        Vector3 startPosition = targetPosition + (Vector3.down * 10f); // Start 10 units below
+
+        while (elapsed < duration)
+        {
+            // Ease-out lerp for a smooth arrival
+            float t = elapsed / duration;
+            float easedT = 1f - Mathf.Pow(1f - t, 3f); 
+            transform.position = Vector3.Lerp(startPosition, targetPosition, easedT);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        transform.position = targetPosition;
     }
 
     private IEnumerator LifetimeRoutine(float spawnTime)
@@ -41,20 +62,17 @@ public class Pulpit : MonoBehaviour
             RemainingTime -= Time.deltaTime;
             float elapsedTime = TotalLifetime - RemainingTime;
 
-            // Trigger spawner when elapsed time hits spawn_time
             if (!_spawnTriggerFired && elapsedTime >= spawnTime)
             {
                 _spawnTriggerFired = true;
                 OnSpawnTriggerTimeReached?.Invoke(this);
             }
 
-            // Visual countdown display
             if (_timerText != null)
             {
                 _timerText.text = Mathf.Max(0f, RemainingTime).ToString("F1");
             }
 
-            // Warning visual during the last 1.0 second: fade toward red and shrink slightly
             if (RemainingTime <= 1.0f)
             {
                 float t = 1f - Mathf.Clamp01(RemainingTime);
@@ -68,7 +86,24 @@ public class Pulpit : MonoBehaviour
             yield return null;
         }
 
+        // 1. Fire the destroyed event early so the spawner can immediately spawn a replacement
         OnPulpitDestroyed?.Invoke(this);
+
+        // 2. Animate the platform falling into the abyss
+        float fallElapsed = 0f;
+        float fallDuration = 0.5f;
+        Vector3 currentPos = transform.position;
+        Vector3 targetPos = currentPos + (Vector3.down * 15f);
+
+        while (fallElapsed < fallDuration)
+        {
+            float t = fallElapsed / fallDuration;
+            // Ease-in lerp to simulate gravity
+            transform.position = Vector3.Lerp(currentPos, targetPos, t * t);
+            fallElapsed += Time.deltaTime;
+            yield return null;
+        }
+
         Destroy(gameObject);
     }
 
@@ -81,11 +116,10 @@ public class Pulpit : MonoBehaviour
     }
 
     private void OnTriggerEnter(Collider other)
-{
-    if (other.GetComponent<DoofusController>() != null)
     {
-        ScoreManager.Instance?.RegisterPulpitVisit(gameObject.GetInstanceID());
+        if (other.GetComponent<DoofusController>() != null)
+        {
+            ScoreManager.Instance?.RegisterPulpitVisit(gameObject.GetInstanceID());
+        }
     }
-}
-
 }
