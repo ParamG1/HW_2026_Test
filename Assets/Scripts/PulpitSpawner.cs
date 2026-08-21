@@ -10,6 +10,7 @@ public class PulpitSpawner : MonoBehaviour
 
     private const float PlatformSize = 9f; // Pulpit size is 9x9
     private readonly List<Pulpit> _activePulpits = new List<Pulpit>();
+    private bool _hasSpawnedFirst;
 
     // 4 cardinal directions (North, South, East, West)
     private readonly Vector3[] _directions = new Vector3[]
@@ -32,8 +33,37 @@ public class PulpitSpawner : MonoBehaviour
 
     private void Start()
     {
-        // Spawn the starting pulpit at world center (0, 0, 0)
+        // UIManager now controls the first spawn (it happens when Play is
+        // pressed via ResetSpawner). If UIManager isn't present in the scene
+        // for some reason, fall back to the old auto-spawn-on-Start behavior
+        // so the spawner still works standalone.
+        if (UIManager.Instance == null)
+        {
+            SpawnPulpit(Vector3.zero);
+            _hasSpawnedFirst = true;
+        }
+    }
+
+    /// <summary>
+    /// Called by UIManager when a run begins (fresh Play or Restart).
+    /// Clears any pulpits left over from a previous run and spawns
+    /// a fresh starting pulpit at the origin.
+    /// </summary>
+    public void ResetSpawner()
+    {
+        for (int i = _activePulpits.Count - 1; i >= 0; i--)
+        {
+            Pulpit p = _activePulpits[i];
+            if (p == null) continue;
+
+            p.OnSpawnTriggerTimeReached -= HandlePulpitSpawnTrigger;
+            p.OnPulpitDestroyed -= HandlePulpitDestroyed;
+            Destroy(p.gameObject);
+        }
+        _activePulpits.Clear();
+
         SpawnPulpit(Vector3.zero);
+        _hasSpawnedFirst = true;
     }
 
     private void SpawnPulpit(Vector3 position)

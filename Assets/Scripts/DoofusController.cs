@@ -58,4 +58,15 @@ public class DoofusController : MonoBehaviour
         _rb.velocity = (_movementInput * _speed) + currentYVelocity;
         #endif
     }
+
+    /// <summary>
+    /// Called by UIManager on Restart. Clears the fallen/game-over latch
+    /// and zeroes pending input so movement resumes cleanly from the
+    /// respawned position without a stale hangover from the last run.
+    /// </summary>
+    public void ResetState()
+    {
+        _isGameOver = false;
+        _movementInput = Vector3.zero;
+    }
 }
