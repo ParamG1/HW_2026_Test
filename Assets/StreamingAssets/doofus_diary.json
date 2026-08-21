@@ -1,6 +1,6 @@
 {
   "player_data": {
-    "speed": 3.0
+    "speed": 5.0
   },
   "pulpit_data": {
     "min_pulpit_destroy_time": 4.0,
